@@ -1,4 +1,10 @@
 US Regional Sales Performance Dashboard (Excel)
+Quick View
+![Dashboard](Project-Images/01_dashboard.png)
+
+![Channel Performance](Project-Images/02_channel_performance.png)
+
+![Discount Impact](Project-Images/04_discount_impact.png)
 
 An Excel dashboard analyzing U.S. sales performance across channels, products, discount levels, warehouses, and fulfillment timelines to identify revenue/profit drivers and operational improvement opportunities.
 
