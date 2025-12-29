@@ -1,0 +1,47 @@
+let
+ Source = Csv.Document(File.Contents("C:\Users\MY PC\Desktop\CAPSTONE PROJECTS\REGIONAL SALES DATA USA.csv"),[Delimiter=",", Columns=16, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+ #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+ #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"OrderNumber", type text}, {"Sales Channel", type text}, {"WarehouseCode", type text}, {"ProcuredDate", type date}, {"OrderDate", type date}, {"ShipDate", type date}, {"DeliveryDate", type date}, {"CurrencyCode", type text}, {"_SalesTeamID", Int64.Type}, {"_CustomerID", Int64.Type}, {"_StoreID", Int64.Type}, {"_ProductID", Int64.Type}, {"Order Quantity", Int64.Type}, {"Discount Applied", type number}, {"Unit Cost", type number}, {"Unit Price", type number}}),
+ #"Renamed Columns" = Table.RenameColumns(#"Changed Type",{{"_SalesTeamID", "SalesTeamID"}, {"_CustomerID", "CustomerID"}, {"_StoreID", "StoreID"}, {"_ProductID", "ProductID"}}),
+ // Date using Locale
+ #"Changed Type with Locale" = Table.TransformColumnTypes(#"Renamed Columns", {{"ProcuredDate", type date}, {"OrderDate", type date}, {"ShipDate", type date}, {"DeliveryDate", type date}}, "en-GB"),
+ // Changed whole numbers of order quantity, unit cost, unit price and discount applied to text
+ #"Changed Type1" = Table.TransformColumnTypes(#"Changed Type with Locale",{{"Order Quantity", type text}, {"Discount Applied", type text}, {"Unit Cost", type text}, {"Unit Price", type text}}),
+ // " to blank
+ #"Replaced Value" = Table.ReplaceValue(#"Changed Type1","""","",Replacer.ReplaceText,{"Order Quantity", "Discount Applied", "Unit Cost", "Unit Price"}),
+ // , to blank
+ #"Replaced Value1" = Table.ReplaceValue(#"Replaced Value",",","",Replacer.ReplaceText,{"Order Quantity", "Discount Applied", "Unit Cost", "Unit Price"}),
+ // % to blank
+ #"Replaced Value2" = Table.ReplaceValue(#"Replaced Value1","%","",Replacer.ReplaceText,{"Order Quantity", "Discount Applied", "Unit Cost", "Unit Price"}),
+ #"Changed Type2" = Table.TransformColumnTypes(#"Replaced Value2",{{"Order Quantity", Int64.Type}, {"Unit Cost", type number}, {"Unit Price", type number}, {"Discount Applied", type number}}),
+ // sorted by order dates in descending form
+ #"Sorted Rows" = Table.Sort(#"Changed Type2",{{"OrderDate", Order.Descending}}),
+ // order number must be unique
+ #"Removed Duplicates" = Table.Distinct(#"Sorted Rows", {"OrderNumber"}),
+ // order qty or unit price <=0
+ #"Anomaly Flag" = Table.AddColumn(#"Removed Duplicates", "AnomalyFlag", each if [Order Quantity] <= 0 then "CheckQty" else if [Unit Price] <= 0 then "CheckPrice" else "OK"),
+ // [Order Quantity] * [Unit Price]
+ SalesRevenue = Table.AddColumn(#"Anomaly Flag", "SalesRevenue", each [Order Quantity] * [Unit Price]),
+ // [Order Quantity] * [Unit Price] * (1 - [Discount Applied])
+ #"NetSales after Discount" = Table.AddColumn(SalesRevenue, "NetSales", each [Order Quantity] * [Unit Price] * (1 - [Discount Applied])),
+ // [NetSales] - ([Order Quantity] * [Unit Cost])
+ Profit = Table.AddColumn(#"NetSales after Discount", "Profit", each [NetSales] - ([Order Quantity] * [Unit Cost])),
+ // If [DiscountRate] <= 0.05 then "0–5%"
+ // Else if [DiscountRate] <= 0.15 then ">5–15%"
+ // Else if [DiscountRate] <= 0.30 then ">15–30%"
+ // Else ">30%".
+ #"Discount Bucket" = Table.AddColumn(Profit, "Discount Bucket", each if [Discount Applied] <= 0.05 then "0–5 %" else if [Discount Applied] <= 0.15 then ">5–15 %" else if [Discount Applied] <= 0.3 then ">15–30 %" else ">30%"),
+ // [Profit]/[NetSales]
+ GrossMarginPct = Table.AddColumn(#"Discount Bucket", "GrossMarginPct", each [Profit]/[NetSales]),
+ // [DeliveryDate]-[ShipDate]
+ DaysToDeliver = Table.AddColumn(GrossMarginPct, "DaysToDeliver", each [DeliveryDate]-[ShipDate]),
+ // [ShipDate]-[OrderDate]
+ DaysToShip = Table.AddColumn(DaysToDeliver, "DaysToShip", each [ShipDate]-[OrderDate]),
+ #"Changed Type3" = Table.TransformColumnTypes(DaysToShip,{{"OrderNumber", type text}, {"Sales Channel", type text}, {"WarehouseCode", type text}, {"ProcuredDate", type date}, {"OrderDate", type date}, {"ShipDate", type date}, {"DeliveryDate", type date}, {"CurrencyCode", type text}, {"SalesTeamID", Int64.Type}, {"CustomerID", Int64.Type}, {"StoreID", Int64.Type}, {"ProductID", Int64.Type}, {"Order Quantity", Int64.Type}, {"Discount Applied", type number}, {"Unit Cost", type number}, {"Unit Price", type number}, {"AnomalyFlag", type text}, {"SalesRevenue", type number}, {"NetSales", type number}, {"Profit", type number}, {"Discount Bucket", type text}, {"GrossMarginPct", type number}, {"DaysToDeliver", type duration}, {"DaysToShip", type duration}}),
+ #"Changed Type4" = Table.TransformColumnTypes(#"Changed Type3",{{"DaysToDeliver", Int64.Type}, {"DaysToShip", Int64.Type}}),
+ #"Changed Type with Locale1" = Table.TransformColumnTypes(#"Changed Type4", {{"ProcuredDate", type date}}, "en-GB"),
+ #"Changed Type with Locale2" = Table.TransformColumnTypes(#"Changed Type with Locale1", {{"OrderDate", type date}}, "en-GB"),
+ #"Changed Type with Locale3" = Table.TransformColumnTypes(#"Changed Type with Locale2", {{"ShipDate", type date}}, "en-GB"),
+ #"Changed Type with Locale4" = Table.TransformColumnTypes(#"Changed Type with Locale3", {{"DeliveryDate", type date}}, "en-GB")
+in
+ #"Changed Type with Locale4"
