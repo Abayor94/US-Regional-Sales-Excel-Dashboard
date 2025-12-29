@@ -82,4 +82,4 @@ Recommendations
 Files
 - `US_Regional_Sales_Dashboard_Excel.xlsx` — interactive workbook (Power Query + pivots + dashboard)
 - `powerquery_m_code.txt` — Power Query script used for transformations
-- `/Project-images` — dashboard + pivot screenshots for quick viewing
+- `Project-images` — dashboard + pivot screenshots for quick viewing
