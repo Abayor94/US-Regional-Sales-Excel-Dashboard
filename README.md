@@ -3,7 +3,6 @@
 
 ## Project Overview
 This project is an Excel dashboard analyzing U.S. sales performance across channels, products, discount levels, warehouses, and fulfillment timelines to identify revenue/profit drivers and operational improvement opportunities. 
-
 The workflow is built to be reproducible: data cleaning + feature engineering are handled in **Power Query**, then summarized with **PivotTables/PivotCharts** into a dashboard with KPI cards and visuals.
 ---
 
